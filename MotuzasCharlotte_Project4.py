@@ -9,6 +9,21 @@ import matplotlib.pyplot as plt
 # equations 9.32 and 9.40 in the text 
 # main function can call additional functions that you write 
 
+# Taken from Lab 10 
+
+def make_tridiagonal(N,b,d,a): 
+    '''function that returns a tridiagonal matrix given the matrix size (N), and three values d, b, and a. The returned matrix will be N by N, and the order of the tridiagonal will be [a,d,b]'''
+    A = d*np.eye(N)+a*np.diagflat(np.ones(N-1),1)+b*np.diagflat(np.ones(N-1),-1)
+    return A
+
+def spectral_radius(A): 
+    '''Function that computes the eigenvalues of an input 2D array A, and returns the eigenvalue with the maximum absolute value.'''
+    eigenvalues = np.linalg.eig(A)[0]
+    max_eigenvalue = np.max(np.abs(eigenvalues))
+    return max_eigenvalue
+
+# New Function
+
 def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wparam = [10, 0, 0.5]):
     '''
     method: string, either ftcs or crank
@@ -22,23 +37,46 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
     m = 0.5
     hbar = 1
     coeff = (hbar**2)/(2*m)
+    sigma0 = wparam[0]
+    x0 = wparam[1]
+    k0 = wparam[2]
+    x = np.linspace(-length/2, length/2, nspace)  # Spatial grid
+    t = np.linspace(0, ntime * tau, ntime)  # Time grid
+
+    # Initialize solution array and initial conditions
+    psi = np.zeros((nspace, ntime))
+    #psi[:, 0] = make_initialcond(0.25,30,x)  # Initial condition
 
     if method == 'ftcs': 
-        print('ftcs')
+        d = 0
+        b = -1
+        a_const = 1
+        H = make_tridiagonal(nspace, b, d, a_const)
+        H[0, -1] = b
+        H[-1, 0] = a_const
+        A = (np.identity(nspace) + (i*tau/hbar)*H)
+
+        # Check spectral radius
+        sr = spectral_radius(A)
+        print(sr)
+        if sr - 1 > 1e-10:
+            print("Warning: Unstable integration. Spectral radius > 1.")
+        else: 
+            print("Seems good!!")
 
     elif method == 'crank': 
         print('crank')
-        
+
     else: 
         print("Please enter either 'ftcs' or 'crank' as the method input")    
     
+        # compute solution
+    for istep in range(1, ntime):
+        psi[:, istep] = A.dot(psi[:, istep-1])
     
     
     
-    
-    
-    
-    return print('Not Done Yet')
+    return psi, x, t
 
 # see eqn 9.42 in the text as well 
 # periodic boundary conditions, see lab 11 
