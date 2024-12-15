@@ -15,7 +15,7 @@ def make_tridiagonal(N,b,d,a):
     A = d*np.eye(N)+a*np.diagflat(np.ones(N-1),1)+b*np.diagflat(np.ones(N-1),-1)
     return A
 
-def spectral_radius(A): 
+def stability_check(A): 
     '''Function that computes the eigenvalues of an input 2D array A, and returns the eigenvalue with the maximum absolute value.'''
     eigenvalues = np.linalg.eig(A)[0]
     max_eigenvalue = np.max(np.abs(eigenvalues))
@@ -37,11 +37,16 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
     - wparam (list): Initial wave packet parameters [sigma0, x0, k0]. Default is [10, 0, 0.5].
 
     Returns:
-    - psi (2D array): Wave function ψ(x, t) over space and time.
+    - psi (2D array): Wave function over space and time.
     - x (1D array): Spatial grid values.
     - t (1D array): Time grid values.
-    - prob (2D array): Probability density |ψ|^2(x, t).
+    - prob (2D array): Probability density.
     """
+
+    if nspace <= 0 or ntime <= 0:
+        raise ValueError("nspace and ntime must be positive integers.")
+    if tau <= 0:
+        raise ValueError("tau must be a positive float.")
     
     m = 0.5 # mass of particle
     hbar = 1 # planck's constant 
@@ -82,7 +87,7 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
         A = (np.identity(nspace) - (1j*tau/hbar)*H)
 
         # Check stability 
-        stability_check = spectral_radius(A)
+        stability_check = stability_check(A)
         print(stability_check)
         if stability_check - 1 > 1e-5:
             raise ValueError("Unstable FTCS method: spectral radius > 1.")
@@ -113,37 +118,32 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
 
     return psi, x, t, prob
 
-# see eqn 9.42 in the text as well 
-# periodic boundary conditions, see lab 11 
-# return 2D array, two 1D arrays giving x and t, and 1D array that gives total prob for each timestep (conserved)
-# additional sch_plot function that uses output to visualize results 
-# plot of psi at a specific time t
-# plot of prob, plot of the particle prob density at a specific time 
-# numpy.conjugate to do complex conjugation 
+# Function for plotting the shrodinger eqn 
 
 def sch_plot(psi,x,t,prob,ntime,plot,save):
     """
-    Visualizes the results of the Schrödinger equation solver.
+    Visualizes the results of the Schrodinger equation solver.
 
     Parameters:
     - psi (2D array): Wave function ψ(x, t) over space and time.
     - x (1D array): Spatial grid values.
     - t (1D array): Time grid values.
-    - prob (2D array): Probability density |ψ|^2(x, t).
+    - prob (2D array): Probability density.
     - ntime (int): Number of time steps.
     - plot (str): Type of plot ('psi' or 'prob').
-    - save (int): Save flag (1 to save, 0 otherwise).
+    - save (int): Save indicator (1 to save, 0 otherwise).
     """
 
     if plot == 'psi':
+        repsi = np.real(psi)
         # from lab 11 
         # plotting wave function 
         plotskip = round(0.05*ntime)
         fig, ax = plt.subplots()
         # space out the plots vertically to make the visualization clearer
-        yoffset = psi[:,0].max() - psi[:,0].min()
+        yoffset = repsi[:,0].max() - repsi[:,0].min()
         for i in np.arange(len(t)-1,0,-plotskip): 
-            ax.plot(x, psi[:,i]+yoffset*i/plotskip,label = 't ={:.3f}'.format(t[i]))
+            ax.plot(x, repsi[:,i]+yoffset*i/plotskip,label = 't ={:.3f}'.format(t[i]))
         ax.set_xlabel('X position')
         ax.set_ylabel('$\\psi$(x,t) [offset]')
 
@@ -188,7 +188,6 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
         plt.show()
     else: 
         raise ValueError("Invalid plot type. Choose 'psi' or 'prob'.")
-
     
     return 
 
