@@ -42,7 +42,7 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
     m = 0.5
     hbar = 1
     h = length/(nspace-1) # grid size 
-    coeff = (hbar**2)/(2*m)
+    coeff = (hbar**2)/(2*m*(h**2))
     sigma0 = wparam[0]
     x0 = wparam[1]
     k0 = wparam[2]
@@ -54,8 +54,8 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
 
     # Initialize solution array and initial conditions
     psi = np.zeros((nspace, ntime),dtype=complex)
-    #psi[:, 0] = (1/(np.sqrt(sigma0*np.sqrt(np.pi))))*np.exp(1j*k0*x)*np.exp(-((x-x0)**2)/(2*sigma0**2))      # Initial condition
-    psi[:,0] = make_initialcond(sigma0,k0,x)
+    psi[:, 0] = (1/(np.sqrt(sigma0*np.sqrt(np.pi))))*np.exp(1j*k0*x)*np.exp(-((x-x0)**2)/(2*sigma0**2))      # Initial condition
+    #print(np.real(psi[:, 0]))
 
     d = -2
     b = 1
@@ -63,7 +63,7 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
     H = make_tridiagonal(nspace, b, d, a)
     H[0, -1] = b
     H[-1, 0] = a
-    H = -(coeff/(h**2))*H + V*np.identity(nspace)
+    H = -coeff*H + V*np.identity(nspace)
 
     if method == 'ftcs': 
         A = (np.identity(nspace) - (1j*tau/hbar)*H)
@@ -85,10 +85,9 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
         # compute solution
     
     prob = np.empty([nspace,ntime])
-    for istep in range(ntime):
+    for istep in range(1,ntime):
         psi[:, istep] = A.dot(psi[:, istep-1])
-        prob[:,istep] = np.abs(psi[:,istep] * np.conjugate(psi[:,istep]))
-    
+        prob[:,istep] = np.abs(psi[:,istep] * np.conjugate(psi[:,istep]))    
     
     return psi, x, t, prob
 
@@ -112,7 +111,7 @@ def sch_plot(psi,x,t,prob):
     plt.show()
 
     fig2 = plt.figure()
-    for i in range(8): 
+    for i in range(1,8): 
         plt.plot(x,prob[:,50*i],label='{}'.format(50*i))
     plt.title('Particle Probability Density')
     plt.xlabel('Position (x)')
@@ -120,8 +119,8 @@ def sch_plot(psi,x,t,prob):
     plt.legend()
     plt.show()
 
-    return print('Ta-Da')
+    return 
 
 
-psi, x, t, prob = sch_eqn(30, 500, 0.03, method='crank', length=200, potential = [], wparam = [10, 0, 0.5])
+psi, x, t, prob = sch_eqn(100, 500, 0.03, method='crank', length=200, potential = [], wparam = [10, 0, 0.5])
 sch_plot(psi,x,t,prob)
