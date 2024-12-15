@@ -9,12 +9,36 @@ import matplotlib.pyplot as plt
 # equations 9.32 and 9.40 in the text 
 # main function can call additional functions that you write 
 
-# sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wparam = [10, 0, 0.5])
-'''
-method: string, either ftcs or crank
-length: float, size of spatial grid. Default to 200 (grid extends from -100 to +100)
-potential: 1-D array giving the spatial index values at which the potential V(x) should be set to 1. Default to empty. For example, [25, 50] will set V[25] = V[50] = 1.
-wparam: list of parameters for initial condition [sigma0, x0, k0]. Default [10, 0, 0.5].'''
+def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wparam = [10, 0, 0.5]):
+    '''
+    method: string, either ftcs or crank
+    length: float, size of spatial grid. Default to 200 (grid extends from -100 to +100)
+    potential: 1-D array giving the spatial index values at which the potential V(x) should be set to 1. Default to empty. For example, [25, 50] will set V[25] = V[50] = 1.
+    wparam: list of parameters for initial condition [sigma0, x0, k0]. Default [10, 0, 0.5].
+    
+    returns a 2d array returning psy as a function of x and t, and the corresponding 2D arrays x and t as grid values
+    in addition, returns the total probability computed for each time step. '''
+    
+    m = 0.5
+    hbar = 1
+    coeff = (hbar**2)/(2*m)
+
+    if method == 'ftcs': 
+        print('ftcs')
+
+    elif method == 'crank': 
+        print('crank')
+        
+    else: 
+        print("Please enter either 'ftcs' or 'crank' as the method input")    
+    
+    
+    
+    
+    
+    
+    
+    return print('Not Done Yet')
 
 # see eqn 9.42 in the text as well 
 # periodic boundary conditions, see lab 11 
