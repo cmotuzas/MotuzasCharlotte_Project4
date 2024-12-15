@@ -1,7 +1,6 @@
 # Project 4 
 
 import numpy as np 
-import scipy as scp 
 import matplotlib.pyplot as plt 
 
 # develop a python function that solves the one dimensional, time-dependent Schroedinger Eqn
@@ -113,7 +112,7 @@ def sch_eqnNM4P(nspace, ntime, tau, method='ftcs', length=200, potential = [], w
     sigma0 = wparam[0]
     x0 = wparam[1]
     k0 = wparam[2]
-    x = np.linspace(-length/2, length/2, nspace)  # Spatial grid
+    x = np.arange(nspace)*h - length/2
     t = np.linspace(0, ntime * tau, ntime)  # Time grid
     V = np.zeros(len(x))
     for i in potential: 
@@ -139,14 +138,6 @@ def sch_eqnNM4P(nspace, ntime, tau, method='ftcs', length=200, potential = [], w
     psi = np.zeros((nspace, ntime),dtype=complex)
     psi[:, 0] = (1/(np.sqrt(sigma0*np.sqrt(np.pi))))*np.exp(1j*k0*x)*np.exp(-((x-x0)**2)/(2*sigma0**2))      # Initial condition
 
-    d = -2
-    b = 1
-    a = 1
-    H = make_tridiagonal(nspace, b, d, a)
-    H[0, -1] = b
-    H[-1, 0] = a
-    H = -coeff*H + V*np.identity(nspace)
-
     if method == 'ftcs': 
         A = np.identity(nspace) - 0.5*1j*tau/hbar*ham
 
@@ -164,13 +155,15 @@ def sch_eqnNM4P(nspace, ntime, tau, method='ftcs', length=200, potential = [], w
     else: 
         print("Please enter either 'ftcs' or 'crank' as the method input")    
     
-        # compute solution
+    
+    # compute solution
     
     prob = np.empty([nspace,ntime])
     for istep in range(1,ntime):
         psi[:, istep] = A.dot(psi[:, istep-1])
         prob[:,istep] = np.abs(psi[:,istep] * np.conjugate(psi[:,istep]))    
     
+
     return psi, x, t, prob
 
 
@@ -180,7 +173,7 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
     if plot == 'psi':
         fig = plt.figure()
         for i in range(8): 
-            plt.plot(x,np.real(psi[:,N*i]),label='{}'.format(N*i))
+            plt.plot(x,np.real(psi[:,N*i]),label='step {}'.format(N*i))
         plt.title('Schrodinger Wave Equation Results')
         plt.xlabel('Position (x)')
         plt.ylabel('$\\psi$ (x, t)')
@@ -191,7 +184,7 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
     if plot == 'prob':
         fig = plt.figure()
         for i in range(1,8): 
-            plt.plot(x,prob[:,N*i],label='{}'.format(N*i))
+            plt.plot(x,prob[:,N*i],label='step {}'.format(N*i))
         plt.title('Particle Probability Density')
         plt.xlabel('Position (x)')
         plt.ylabel('$|\\psi|^2$ (x, t)')
@@ -202,6 +195,6 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
     
     return 
 
-ntime = 500
+ntime = 5000
 psi, x, t, prob = sch_eqnNM4P(100, ntime, 0.03, method='crank', length=200, potential = [], wparam = [10, 0, 0.5])
 sch_plot(psi,x,t,prob,ntime,'psi',1)
