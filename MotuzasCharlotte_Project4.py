@@ -36,25 +36,31 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
     
     m = 0.5
     hbar = 1
+    h = length/(nspace-1) # grid size 
     coeff = (hbar**2)/(2*m)
     sigma0 = wparam[0]
     x0 = wparam[1]
     k0 = wparam[2]
     x = np.linspace(-length/2, length/2, nspace)  # Spatial grid
     t = np.linspace(0, ntime * tau, ntime)  # Time grid
+    V = np.zeros(len(x))
+    for i in potential: 
+        V[i] = 1
 
     # Initialize solution array and initial conditions
     psi = np.zeros((nspace, ntime))
-    #psi[:, 0] = make_initialcond(0.25,30,x)  # Initial condition
+    psi[:, 0] = (1/(np.sqrt(sigma0*np.sqrt(np.pi))))*np.exp(1j*k0*x)*np.exp(-((x-x0)**2)/(2*sigma0**2))      # Initial condition
+    
+    d = 0
+    b = -1
+    a_const = 1
+    H = make_tridiagonal(nspace, b, d, a_const)
+    H[0, -1] = b
+    H[-1, 0] = a_const
+    H = -(coeff/(h**2))*H + V*np.identity(nspace)
 
     if method == 'ftcs': 
-        d = 0
-        b = -1
-        a_const = 1
-        H = make_tridiagonal(nspace, b, d, a_const)
-        H[0, -1] = b
-        H[-1, 0] = a_const
-        A = (np.identity(nspace) + (i*tau/hbar)*H)
+        A = (np.identity(nspace) - (1j*tau/hbar)*H)
 
         # Check spectral radius
         sr = spectral_radius(A)
@@ -65,7 +71,7 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
             print("Seems good!!")
 
     elif method == 'crank': 
-        print('crank')
+        A = np.linalg.inv((np.identity(nspace) - (1j*tau/hbar)*H))*(np.identity(nspace) - (1j*tau/hbar)*H)
 
     else: 
         print("Please enter either 'ftcs' or 'crank' as the method input")    
