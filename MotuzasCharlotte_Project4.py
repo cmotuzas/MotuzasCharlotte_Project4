@@ -48,15 +48,15 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
         V[i] = 1
 
     # Initialize solution array and initial conditions
-    psi = np.zeros((nspace, ntime))
+    psi = np.zeros((nspace, ntime),dtype=complex)
     psi[:, 0] = (1/(np.sqrt(sigma0*np.sqrt(np.pi))))*np.exp(1j*k0*x)*np.exp(-((x-x0)**2)/(2*sigma0**2))      # Initial condition
     
-    d = 0
-    b = -1
-    a_const = 1
-    H = make_tridiagonal(nspace, b, d, a_const)
+    d = -2
+    b = 1
+    a = 1
+    H = make_tridiagonal(nspace, b, d, a)
     H[0, -1] = b
-    H[-1, 0] = a_const
+    H[-1, 0] = a
     H = -(coeff/(h**2))*H + V*np.identity(nspace)
 
     if method == 'ftcs': 
@@ -65,24 +65,26 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
         # Check spectral radius
         sr = spectral_radius(A)
         print(sr)
-        if sr - 1 > 1e-10:
+        if sr - 1 > 1e-:
             print("Warning: Unstable integration. Spectral radius > 1.")
         else: 
             print("Seems good!!")
 
     elif method == 'crank': 
-        A = np.linalg.inv((np.identity(nspace) - (1j*tau/hbar)*H))*(np.identity(nspace) - (1j*tau/hbar)*H)
+        A = np.linalg.inv((np.identity(nspace) - (1j*tau/hbar)*H)).dot(np.identity(nspace) - (1j*tau/hbar)*H)
 
     else: 
         print("Please enter either 'ftcs' or 'crank' as the method input")    
     
         # compute solution
+    
+    prob = np.empty(ntime)
     for istep in range(1, ntime):
         psi[:, istep] = A.dot(psi[:, istep-1])
+        prob = np.abs(psi * np.conjugate(psi))
     
     
-    
-    return psi, x, t
+    return psi, x, t, prob
 
 # see eqn 9.42 in the text as well 
 # periodic boundary conditions, see lab 11 
@@ -92,7 +94,6 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
 # plot of prob, plot of the particle prob density at a specific time 
 # numpy.conjugate to do complex conjugation 
 
-# use comments to describe the origins of the code, if taken from NM4P or prior labs 
 
-# report, function documentation, report on how you tested your functions 
-# write so that it may be used by an end user 
+
+psi, x, t, prob = sch_eqn(30, 500, 0.03, method='ftcs', length=200, potential = [], wparam = [10, 0, 0.5])
