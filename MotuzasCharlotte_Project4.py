@@ -21,22 +21,34 @@ def spectral_radius(A):
     max_eigenvalue = np.max(np.abs(eigenvalues))
     return max_eigenvalue
 
-# New Function
+# Main function to solve the Schrodinger equation
 
 def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wparam = [10, 0, 0.5]):
-    '''
-    method: string, either ftcs or crank
-    length: float, size of spatial grid. Default to 200 (grid extends from -100 to +100)
-    potential: 1-D array giving the spatial index values at which the potential V(x) should be set to 1. Default to empty. For example, [25, 50] will set V[25] = V[50] = 1.
-    wparam: list of parameters for initial condition [sigma0, x0, k0]. Default [10, 0, 0.5].
+    """
+    Solves the 1D time-dependent Schrödinger Equation using FTCS or Crank-Nicholson methods.
+
+    Parameters:
+    - nspace (int): Number of spatial grid points.
+    - ntime (int): Number of time steps to evolve.
+    - tau (float): Time step size.
+    - method (str): Solution method ('ftcs' or 'crank'). Default is 'ftcs'.
+    - length (float): Total length of spatial grid. Default is 200.
+    - potential (list): Indices where potential V(x) = 1. Default is an empty list.
+    - wparam (list): Initial wave packet parameters [sigma0, x0, k0]. Default is [10, 0, 0.5].
+
+    Returns:
+    - psi (2D array): Wave function ψ(x, t) over space and time.
+    - x (1D array): Spatial grid values.
+    - t (1D array): Time grid values.
+    - prob (2D array): Probability density |ψ|^2(x, t).
+    """
     
-    returns a 2d array returning psy as a function of x and t, and the corresponding 2D arrays x and t as grid values
-    in addition, returns the total probability computed for each time step. '''
+    m = 0.5 # mass of particle
+    hbar = 1 # planck's constant 
+    h = length/(nspace-1) # spatial step size 
+    coeff = (hbar**2)/(2*m*(h**2)) # coefficient used in hamiltonian
     
-    m = 0.5
-    hbar = 1
-    h = length/(nspace-1) # grid size 
-    coeff = (hbar**2)/(2*m*(h**2))
+    # initial wave packet parameters
     sigma0 = wparam[0]
     x0 = wparam[1]
     k0 = wparam[2]
@@ -44,33 +56,35 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
     t = np.linspace(0, ntime * tau, ntime)  # Time grid
     V = np.zeros(nspace)
     for i in potential: 
-        V[i] = 1
+        V[i] = 1  # set at 1 for specified integers 
 
     # Initialize solution array and initial conditions
     psi = np.zeros((nspace, ntime),dtype=complex)
     psi[:, 0] = (1/(np.sqrt(sigma0*np.sqrt(np.pi))))*np.exp(1j*k0*x)*np.exp(-((x-x0)**2)/(2*sigma0**2))      # Initial condition
     #print(np.real(psi[:, 0]))
 
+    # making hamiltonian 
+
     d = -2
     b = 1
     a = 1
     H = make_tridiagonal(nspace, b, d, a)
-    H[0,0] = d
-    H[0, -1] = a
+    
+    # periodic boundary conditions 
+
+    H[0, -1] = a 
     H[-1, 0] = b
-    H[-1,-1] = d
-    H[-1,-2] = a 
-    H[0,1] = b
 
     H = -coeff*H + V*np.identity(nspace)
 
+    # select method 
     if method == 'ftcs': 
         A = (np.identity(nspace) - (1j*tau/hbar)*H)
 
-        # Check spectral radius
-        sr = spectral_radius(A)
-        print(sr)
-        if sr - 1 > 1e-5:
+        # Check stability 
+        stability_check = spectral_radius(A)
+        print(stability_check)
+        if stability_check - 1 > 1e-5:
             raise ValueError("Unstable FTCS method: spectral radius > 1.")
 
 
@@ -84,11 +98,19 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
     
     total_prob = np.zeros(ntime)
     prob = np.empty([nspace,ntime])
+    prob[:,0] = np.abs(psi[:,0] * np.conjugate(psi[:,0]))
+    total_prob[0] = np.sum(prob[:, 0]) * h
     for istep in range(1,ntime):
         psi[:, istep] = A.dot(psi[:, istep-1])
         prob[:,istep] = np.abs(psi[:,istep] * np.conjugate(psi[:,istep]))    
-        total_prob[istep] = np.sum(np.abs(psi[:, istep])**2) * h  # Normalize probability
+        total_prob[istep] = np.sum(prob[:, istep]) * h  # Normalize probability
     
+    for i in range(ntime-1):
+        if np.diff(total_prob)[i] > 1e-3:
+            print('Warning! Probability not conserved!')
+            print(total_prob[i])
+        
+
     return psi, x, t, prob
 
 # see eqn 9.42 in the text as well 
@@ -99,10 +121,23 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
 # plot of prob, plot of the particle prob density at a specific time 
 # numpy.conjugate to do complex conjugation 
 
-def sch_plot(psi,x,t,prob,ntime,plot,save): 
-    if plot == 'psi':
-       # from lab 11 
+def sch_plot(psi,x,t,prob,ntime,plot,save):
+    """
+    Visualizes the results of the Schrödinger equation solver.
 
+    Parameters:
+    - psi (2D array): Wave function ψ(x, t) over space and time.
+    - x (1D array): Spatial grid values.
+    - t (1D array): Time grid values.
+    - prob (2D array): Probability density |ψ|^2(x, t).
+    - ntime (int): Number of time steps.
+    - plot (str): Type of plot ('psi' or 'prob').
+    - save (int): Save flag (1 to save, 0 otherwise).
+    """
+
+    if plot == 'psi':
+        # from lab 11 
+        # plotting wave function 
         plotskip = round(0.05*ntime)
         fig, ax = plt.subplots()
         # space out the plots vertically to make the visualization clearer
@@ -125,7 +160,10 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
             plt.savefig('MotuzasCharlotte_Fig_{}.png'.format(plot))
 
         plt.show()
+
     elif plot == 'prob':
+        # plot probability density 
+
         plotskip = round(0.05*ntime)
         fig, ax = plt.subplots()
         # space out the plots vertically to make the visualization clearer
@@ -142,7 +180,7 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
         # Put a legend to the right of the current axis
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        ax.set_title('Probability Distribution with Offsets')
+        ax.set_title('Probability Density with Offsets')
 
         if save == 1: 
             plt.savefig('MotuzasCharlotte_Fig_{}.png'.format(plot))
@@ -154,7 +192,9 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
     
     return 
 
+# example usage 
 ntime = 2000
-psi, x, t, prob = sch_eqn(200, ntime, 0.03, method='crank', length=200, potential = [], wparam = [10, 0, 0.5])
-sch_plot(psi,x,t,prob,ntime,'prob',1)
-
+nspace = 200
+tau = 0.03
+psi, x, t, prob = sch_eqn(nspace, ntime, tau, method='crank', length=200, potential = [], wparam = [10, 0, 0.5])
+sch_plot(psi,x,t,prob,ntime,'psi',1)
