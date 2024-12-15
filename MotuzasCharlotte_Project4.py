@@ -95,28 +95,33 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
 # numpy.conjugate to do complex conjugation 
 
 
-def sch_plot(psi,x,t,prob,ntime): 
-    fig_psi = plt.figure()
+def sch_plot(psi,x,t,prob,ntime,plot,save): 
     N = int(np.round(ntime)/8)
-    for i in range(8): 
-        plt.plot(x,np.real(psi[:,N*i]),label='{}'.format(N*i))
-    plt.title('Schrodinger Wave Equation Results')
-    plt.xlabel('Position (x)')
-    plt.ylabel('$\\psi$ (x, t)')
-    plt.legend()
-    plt.show()
-
-    fig2 = plt.figure()
-    for i in range(1,8): 
-        plt.plot(x,prob[:,N*i],label='{}'.format(N*i))
-    plt.title('Particle Probability Density')
-    plt.xlabel('Position (x)')
-    plt.ylabel('$|\\psi|^2$ (x, t)')
-    plt.legend()
-    plt.show()
-
+    if plot == 'psi':
+        fig = plt.figure()
+        for i in range(8): 
+            plt.plot(x,np.real(psi[:,N*i]),label='{}'.format(N*i))
+        plt.title('Schrodinger Wave Equation Results')
+        plt.xlabel('Position (x)')
+        plt.ylabel('$\\psi$ (x, t)')
+        plt.legend()
+        if save == 1: 
+            plt.savefig('MotuzasCharlotte_Fig_{}.png'.format(plot))
+        plt.show()
+    if plot == 'prob':
+        fig = plt.figure()
+        for i in range(1,8): 
+            plt.plot(x,prob[:,N*i],label='{}'.format(N*i))
+        plt.title('Particle Probability Density')
+        plt.xlabel('Position (x)')
+        plt.ylabel('$|\\psi|^2$ (x, t)')
+        plt.legend()
+        if save == 1: 
+            plt.savefig('MotuzasCharlotte_Fig_{}.png'.format(plot))
+        plt.show()
+    
     return 
 
 ntime = 500
 psi, x, t, prob = sch_eqn(100, ntime, 0.03, method='crank', length=200, potential = [], wparam = [10, 0, 0.5])
-sch_plot(psi,x,t,prob,ntime)
+sch_plot(psi,x,t,prob,ntime,'prob',1)
