@@ -29,7 +29,7 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
 
     Parameters:
     - nspace (int): Number of spatial grid points.
-    - ntime (int): Number of time steps to evolve.
+    - ntime (int): Number of discrete time steps.
     - tau (float): Time step size.
     - method (str): Solution method ('ftcs' or 'crank'). Default is 'ftcs'.
     - length (float): Total length of spatial grid. Default is 200.
@@ -87,9 +87,9 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
         A = (np.identity(nspace) - (1j*tau/hbar)*H)
 
         # Check stability 
-        stability_check = stability_check(A)
-        print(stability_check)
-        if stability_check - 1 > 1e-5:
+        check= stability_check(A)
+        print(check)
+        if check - 1 > 1e-5:
             raise ValueError("Unstable FTCS method: spectral radius > 1.")
 
 
@@ -116,11 +116,11 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential = [], wpara
             print(total_prob[i])
         
 
-    return psi, x, t, prob
+    return psi, x, t, total_prob
 
 # Function for plotting the shrodinger eqn 
 
-def sch_plot(psi,x,t,prob,ntime,plot,save):
+def sch_plot(psi,x,t,plot,save,type= 'specific'):
     """
     Visualizes the results of the Schrodinger equation solver.
 
@@ -128,33 +128,44 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
     - psi (2D array): Wave function ψ(x, t) over space and time.
     - x (1D array): Spatial grid values.
     - t (1D array): Time grid values.
-    - prob (2D array): Probability density.
-    - ntime (int): Number of time steps.
     - plot (str): Type of plot ('psi' or 'prob').
     - save (int): Save indicator (1 to save, 0 otherwise).
+    - type (str): Plot type ('evolution' or 'specific')
     """
+    ntime = len(t)
+    repsi = np.real(psi)
 
     if plot == 'psi':
-        repsi = np.real(psi)
-        # from lab 11 
-        # plotting wave function 
-        plotskip = round(0.05*ntime)
-        fig, ax = plt.subplots()
-        # space out the plots vertically to make the visualization clearer
-        yoffset = repsi[:,0].max() - repsi[:,0].min()
-        for i in np.arange(len(t)-1,0,-plotskip): 
-            ax.plot(x, repsi[:,i]+yoffset*i/plotskip,label = 't ={:.3f}'.format(t[i]))
-        ax.set_xlabel('X position')
-        ax.set_ylabel('$\\psi$(x,t) [offset]')
+        if type == 'evolution':
+            
+            # from lab 11 
+            # plotting wave function 
+            plotskip = round(0.05*ntime)
+            fig, ax = plt.subplots()
+            # space out the plots vertically to make the visualization clearer
+            yoffset = repsi[:,0].max() - repsi[:,0].min()
+            for i in np.arange(len(t)-1,0,-plotskip): 
+                ax.plot(x, repsi[:,i]+yoffset*i/plotskip,label = 't ={:.3f}'.format(t[i]))
+            ax.set_xlabel('X position')
+            ax.set_ylabel('$\\psi$(x,t) [offset]')
 
-        # Shrink current axis by 20%
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+            # Shrink current axis by 20%
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 
-        # Put a legend to the right of the current axis
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            # Put a legend to the right of the current axis
+            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        ax.set_title('Wave Propagation with Offsets')
+            ax.set_title('Wave Propagation with Offsets')
+        elif type == 'specific': 
+            spectime = float(input("At what time would you like to plot the wave function? (Max {}) ".format(np.round(np.diff(t)[0]*(ntime-1),5))))
+            fig, ax = plt.subplots()
+            ax.plot(x,repsi[:,int(np.round(spectime/np.diff(t)[0]))])
+            ax.set_xlabel('X position')
+            ax.set_ylabel('$\\psi$(x,t)')
+            ax.set_title('Wave Propagation at time {}'.format(spectime))
+        else: 
+            raise ValueError("Invalid type. Choose 'evolution' or 'specific'.")
 
         if save == 1: 
             plt.savefig('MotuzasCharlotte_Fig_{}.png'.format(plot))
@@ -163,24 +174,39 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
 
     elif plot == 'prob':
         # plot probability density 
+        prob = np.empty([nspace,ntime])
+        prob[:,0] = np.abs(psi[:,0] * np.conjugate(psi[:,0]))
+        for istep in range(1,ntime):
+            prob[:,istep] = np.abs(psi[:,istep] * np.conjugate(psi[:,istep]))    
+    
+        if type == 'evolution': 
+            plotskip = round(0.05*ntime)
+            fig, ax = plt.subplots()
+            # space out the plots vertically to make the visualization clearer
+            yoffset = prob[:,1].max() - prob[:,1].min()
+            for i in np.arange(len(t)-1,0,-plotskip): 
+                ax.plot(x, prob[:,i]+yoffset*i/plotskip,label = 't ={:.3f}'.format(t[i]))
+            ax.set_xlabel('X position')
+            ax.set_ylabel('P(x,t) [offset]')
 
-        plotskip = round(0.05*ntime)
-        fig, ax = plt.subplots()
-        # space out the plots vertically to make the visualization clearer
-        yoffset = prob[:,1].max() - prob[:,1].min()
-        for i in np.arange(len(t)-1,0,-plotskip): 
-            ax.plot(x, prob[:,i]+yoffset*i/plotskip,label = 't ={:.3f}'.format(t[i]))
-        ax.set_xlabel('X position')
-        ax.set_ylabel('P(x,t) [offset]')
+            # Shrink current axis by 20%
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 
-        # Shrink current axis by 20%
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+            # Put a legend to the right of the current axis
+            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        # Put a legend to the right of the current axis
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-        ax.set_title('Probability Density with Offsets')
+            ax.set_title('Probability Density with Offsets')
+            
+        elif type == 'specific': 
+            spectime = float(input("At what time would you like to plot the probability density? (Max {}) ".format(np.round(np.diff(t)[0]*(len(t)-1),5))))
+            fig, ax = plt.subplots()
+            ax.plot(x,prob[:,int(np.round(spectime/np.diff(t)[0]))])
+            ax.set_xlabel('X position')
+            ax.set_ylabel('P(x,t)')
+            ax.set_title('Probability Density at time {}'.format(spectime))
+        else: 
+            raise ValueError("Invalid type. Choose 'evolution' or 'specific'.")
 
         if save == 1: 
             plt.savefig('MotuzasCharlotte_Fig_{}.png'.format(plot))
@@ -192,8 +218,8 @@ def sch_plot(psi,x,t,prob,ntime,plot,save):
     return 
 
 # example usage 
-ntime = 2000
+ntime = 20000
 nspace = 200
-tau = 0.03
-psi, x, t, prob = sch_eqn(nspace, ntime, tau, method='crank', length=200, potential = [], wparam = [10, 0, 0.5])
-sch_plot(psi,x,t,prob,ntime,'psi',1)
+tau = 0.001
+psi, x, t, prob = sch_eqn(nspace, ntime, tau, method='ftcs', length=300, potential = [], wparam = [7, -50, 1])
+sch_plot(psi,x,t,'prob',1,'specific')
